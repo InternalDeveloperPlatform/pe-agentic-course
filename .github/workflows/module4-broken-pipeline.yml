@@ -1,0 +1,106 @@
+name: "Module 4 — Broken Pipeline (Demo)"
+
+# This workflow intentionally runs broken_app.py, which fails due to a memory
+# leak in the test fixture. On failure, the triage agent is automatically
+# triggered to diagnose the failure and produce a structured JSON report.
+#
+# Used in the Module 4 LIVE DEMO to show:
+#   1. What a broken CI pipeline looks like (human view: raw logs)
+#   2. What the triage agent produces (agent view: structured diagnosis)
+#
+# Trigger this manually from Actions → "Module 4 — Broken Pipeline (Demo)" → Run workflow
+
+on:
+  workflow_dispatch:          # Manual trigger for the live demo
+  push:
+    paths:
+      - 'module4/broken_app.py'  # Auto-trigger when broken_app.py is modified
+
+jobs:
+  # ── Job 1: Run the deliberately broken application ──────────────────────────
+  run-broken-app:
+    name: "Run broken_app.py (will fail)"
+    runs-on: ubuntu-latest
+    outputs:
+      exit_code: ${{ steps.run.outputs.exit_code }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run broken_app.py
+        id: run
+        # continue-on-error so the triage job always runs
+        continue-on-error: true
+        run: |
+          python module4/broken_app.py 2>&1 | tee /tmp/broken_app.log
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Show raw failure log
+        if: always()
+        run: |
+          echo "=== RAW FAILURE LOG (what a human sees today) ==="
+          cat /tmp/broken_app.log
+
+      - name: Upload failure log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: broken-app-log
+          path: /tmp/broken_app.log
+
+  # ── Job 2: Agent diagnoses the failure ─────────────────────────────────────
+  triage-agent:
+    name: "Triage Agent (what Module 8 delivers)"
+    runs-on: ubuntu-latest
+    needs: run-broken-app
+    if: always()   # Always run the agent, even if broken-app passed
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Download failure log
+        uses: actions/download-artifact@v4
+        with:
+          name: broken-app-log
+          path: /tmp/
+
+      - name: Inject log into sample_data.json
+        run: |
+          # Combine the broken_app log with the sample deployment event
+          python3 - << 'EOF'
+          import json, pathlib
+          sample = json.loads(pathlib.Path("module4/sample_data.json").read_text())
+          log_lines = pathlib.Path("/tmp/broken_app.log").read_text().splitlines()
+          sample["ci_failure_log"] = log_lines[-30:]   # last 30 lines — context trimming
+          sample["trigger"] = "ci_test_failure"
+          sample["failed_step"] = "run-broken-app"
+          pathlib.Path("module4/sample_data.json").write_text(json.dumps(sample, indent=2))
+          print(f"Injected {len(log_lines)} log lines (trimmed to last 30)")
+          EOF
+
+      - name: Run triage agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MOCK_MODE: ${{ secrets.ANTHROPIC_API_KEY == '' && '1' || '0' }}
+        run: |
+          echo "=== AGENT VIEW (structured diagnosis) ==="
+          python module4/triage_agent.py
+
+      - name: Upload triage output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module4-triage-output
+          path: output/output_module4.json
+          if-no-files-found: warn

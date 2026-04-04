@@ -1,0 +1,17 @@
+{
+  "trigger": "deployment_complete",
+  "service": "checkout-service",
+  "deploy_id": "deploy-2024-0119-003",
+  "environment": "production",
+  "health_check": {
+    "status": 503,
+    "latency_ms": null
+  },
+  "rollback_available": true,
+  "logs": [
+    "INFO  [checkout-service] Container started successfully",
+    "INFO  [checkout-service] Health check endpoint registered at /health",
+    "INFO  [checkout-service] Listening on :8080"
+  ],
+  "previous_deploys_same_issue": 3
+}

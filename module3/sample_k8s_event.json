@@ -1,0 +1,41 @@
+{
+  "incident_id": "INC-2024-1047",
+  "event_type": "OOMKill",
+  "service": "checkout-api",
+  "namespace": "production",
+  "timestamp": "2024-01-18T09:22:14Z",
+  "pod": {
+    "name": "checkout-api-7d9f8b-xk2qp",
+    "restart_count": 8,
+    "last_exit_code": 137,
+    "last_exit_reason": "OOMKilled",
+    "age_minutes": 22
+  },
+  "resources": {
+    "memory_request": "256Mi",
+    "memory_limit": "512Mi",
+    "memory_peak_before_kill_mi": 1228,
+    "cpu_request": "250m",
+    "cpu_limit": "500m",
+    "cpu_utilisation_pct": 34
+  },
+  "recent_deploys": [
+    {
+      "id": "deploy-2024-0118-001",
+      "version": "v2.3.1",
+      "time": "2024-01-18T09:03:00Z",
+      "status": "success",
+      "changed_components": ["checkout-api"]
+    }
+  ],
+  "logs": [
+    "INFO  [checkout-api] Starting checkout-api v2.3.1",
+    "INFO  [checkout-api] Connected to order-db (pool_size=20)",
+    "WARN  [checkout-api] Memory usage at 480Mi — approaching limit",
+    "ERROR [checkout-api] Memory usage at 508Mi — OOM imminent",
+    "FATAL [kernel] oom-kill event: process checkout-api pid 1 killed, memory cgroup limit exceeded"
+  ],
+  "error_rate_pct": 18.4,
+  "latency_p99_ms": 9320,
+  "affected_downstream": ["order-service", "notification-service"]
+}

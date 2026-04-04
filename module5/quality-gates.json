@@ -1,0 +1,67 @@
+{
+  "_comment": "Module 5 quality gates configuration. Edit thresholds here — no code changes required.",
+  "version": "1.0",
+  "service": "checkout-service",
+  "gates": [
+    {
+      "id": "test_coverage",
+      "name": "Unit Test Coverage",
+      "metric": "coverage_pct",
+      "threshold": 95,
+      "operator": ">=",
+      "unit": "%",
+      "rollback_trigger": false,
+      "description": "Minimum percentage of lines covered by unit tests."
+    },
+    {
+      "id": "coverage_branch",
+      "name": "Branch Coverage",
+      "metric": "coverage_branch_pct",
+      "threshold": 80,
+      "operator": ">=",
+      "unit": "%",
+      "rollback_trigger": false,
+      "description": "Minimum percentage of code branches exercised by tests."
+    },
+    {
+      "id": "sast_findings",
+      "name": "SAST High-Severity Findings",
+      "metric": "security_scan.high",
+      "threshold": 0,
+      "operator": "<=",
+      "unit": "findings",
+      "rollback_trigger": true,
+      "description": "Maximum number of HIGH-severity security findings allowed. Any HIGH finding triggers immediate rollback if already deployed."
+    },
+    {
+      "id": "lighthouse_score",
+      "name": "Lighthouse Performance Score",
+      "metric": "lighthouse_score",
+      "threshold": 85,
+      "operator": ">=",
+      "unit": "score",
+      "rollback_trigger": false,
+      "description": "Minimum Google Lighthouse performance score for the checkout frontend."
+    },
+    {
+      "id": "latency_p95_delta",
+      "name": "P95 Latency Regression",
+      "metric": "latency_p95_delta_pct",
+      "threshold": 10,
+      "operator": "<=",
+      "unit": "%",
+      "rollback_trigger": true,
+      "description": "Maximum allowed increase in P95 latency compared to the previous deployment. Values above 10% indicate performance regression."
+    },
+    {
+      "id": "cost_per_request_delta",
+      "name": "Cost Per Request Regression",
+      "metric": "cost_per_request_delta_pct",
+      "threshold": 10,
+      "operator": "<=",
+      "unit": "%",
+      "rollback_trigger": false,
+      "description": "Maximum allowed increase in compute cost per request. Prevents runaway spending from inefficient code paths."
+    }
+  ]
+}

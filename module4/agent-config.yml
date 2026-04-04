@@ -1,0 +1,12 @@
+# module4/agent-config.yml
+# Scenario configuration for Module 4: AI-Powered Diagnosis and Remediation
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 3
+context_fields:
+  - trigger
+  - service
+  - deploy_id
+  - health_check
+  - logs

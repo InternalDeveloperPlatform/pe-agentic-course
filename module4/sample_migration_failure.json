@@ -1,0 +1,39 @@
+{
+  "trigger": "ci_test_failure",
+  "event_type": "database_migration_failure",
+  "service": "user-service",
+  "pipeline_id": "pipe-2024-0120-011",
+  "environment": "staging",
+  "timestamp": "2026-04-03T14:22:08Z",
+  "commit_sha": "d4e7f92a",
+  "branch": "feature/add-user-preferences",
+  "failed_step": "run-db-migrations",
+  "failed_test_count": 0,
+  "migration": {
+    "migration_file": "migrations/0047_add_preferences_table.sql",
+    "started_at": "2026-04-03T14:19:45Z",
+    "failed_at": "2026-04-03T14:22:08Z",
+    "duration_seconds": 143,
+    "timeout_seconds": 120,
+    "error": "ERROR: lock wait timeout exceeded; try restarting transaction",
+    "lock_holder": {
+      "pid": 8821,
+      "query": "UPDATE users SET last_seen = NOW() WHERE id IN (...)",
+      "duration_seconds": 145,
+      "wait_event": "relation"
+    }
+  },
+  "last_successful_migration": "migrations/0046_add_audit_log_index.sql",
+  "last_successful_commit": "b3a9c14f",
+  "rollback_applied": false,
+  "logs": [
+    "INFO  [migrator] Starting migration 0047_add_preferences_table.sql",
+    "INFO  [migrator] Acquiring exclusive lock on users table...",
+    "WARN  [migrator] Lock acquisition taking longer than expected (60s elapsed)",
+    "WARN  [migrator] Lock acquisition taking longer than expected (120s elapsed)",
+    "ERROR [migrator] Timeout after 143s: lock wait timeout exceeded",
+    "ERROR [migrator] Migration 0047 FAILED — rolling back partial changes",
+    "INFO  [migrator] Rollback complete — database restored to pre-migration state"
+  ],
+  "on_call_engineer": "priya@example.com"
+}

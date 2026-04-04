@@ -1,0 +1,51 @@
+name: "Module 8 — Capstone Agent"
+
+on:
+  # Fires automatically when the module4 broken pipeline fails
+  workflow_run:
+    workflows: ["Module 4 — Broken Pipeline"]
+    types: [completed]
+  # Also allows manual triggering from the Actions tab
+  workflow_dispatch:
+    inputs:
+      simulate:
+        description: "Inject a synthetic CI failure event (true/false)"
+        required: false
+        default: "true"
+
+jobs:
+  run-capstone-agent:
+    runs-on: ubuntu-latest
+    # For workflow_run: only run when the triggering workflow failed
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run Module 8 capstone agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.simulate }}" = "false" ]; then
+            python module8/platform_agent.py
+          else
+            python module8/platform_agent.py --simulate
+          fi
+
+      - name: Upload output artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module8-capstone-report
+          path: output/output_module8_platform_agent.json
+          if-no-files-found: warn

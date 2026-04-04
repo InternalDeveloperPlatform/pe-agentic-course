@@ -1,0 +1,35 @@
+name: "Module 7 — Multi-Agent"
+
+on:
+  push:
+    paths:
+      - 'module7/**'
+      - 'shared/**'
+  workflow_dispatch:
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run Module 7 agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python module7/agent.py
+
+      - name: Upload output artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module7-output
+          path: output/output_module7.json
+          if-no-files-found: warn

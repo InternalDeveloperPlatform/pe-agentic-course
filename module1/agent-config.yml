@@ -1,0 +1,8 @@
+# module1/agent-config.yml
+# Scenario configuration for Module 1: Platform Pain Points & The AI Opportunity
+
+model: claude-opus-4-5-20251101
+max_tokens: 512
+max_iterations: 1
+context_fields:
+  - log_snippet

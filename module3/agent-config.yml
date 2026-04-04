@@ -1,0 +1,11 @@
+# module3/agent-config.yml
+# Scenario configuration for Module 3: Agents That Think — ReAct & Planning
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 5
+context_fields:
+  - incident_id
+  - service
+  - error_rate_pct
+  - logs

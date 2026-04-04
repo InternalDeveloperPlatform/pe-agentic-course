@@ -1,0 +1,20 @@
+{
+  "trigger": "github_actions_failure",
+  "pipeline_id": "pipe-2024-0130-012",
+  "repo": "org/platform-service",
+  "branch": "main",
+  "commit_sha": "9e2f4a1",
+  "failure_stage": "integration-tests",
+  "test_results": {
+    "total": 980,
+    "passed": 947,
+    "failed": 33
+  },
+  "logs": [
+    "ERROR [integration] DB migration timeout after 30s",
+    "ERROR [integration] 33 tests failed: all depend on users table",
+    "WARN  [integration] Migration lock held by deploy-2024-0130-011"
+  ],
+  "previous_run_status": "success",
+  "rollback_available": true
+}

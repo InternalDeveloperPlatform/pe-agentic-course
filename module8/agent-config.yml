@@ -1,0 +1,14 @@
+# module8/agent-config.yml
+# Scenario configuration for Module 8: Build Your Platform Engineering Agent — Capstone
+
+model: claude-opus-4-5-20251101
+max_tokens: 2048
+max_iterations: 5
+context_fields:
+  - trigger
+  - pipeline_id
+  - repo
+  - branch
+  - failure_stage
+  - test_results
+  - logs

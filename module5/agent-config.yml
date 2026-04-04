@@ -1,0 +1,11 @@
+# module5/agent-config.yml
+# Scenario configuration for Module 5: Intelligent CI/CD and Adaptive Delivery
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 1
+context_fields:
+  - pipeline_id
+  - test_results
+  - coverage_pct
+  - security_scan

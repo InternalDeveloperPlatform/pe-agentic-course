@@ -1,0 +1,10 @@
+# module6/agent-config.yml
+# Scenario configuration for Module 6: Operational Intelligence and Conversational Observability
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 1
+context_fields:
+  - metrics
+  - recent_alerts
+  - user_question

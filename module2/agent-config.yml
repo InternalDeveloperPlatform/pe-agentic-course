@@ -1,0 +1,10 @@
+# module2/agent-config.yml
+# Scenario configuration for Module 2: Build Your First AI Agent
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 3
+context_fields:
+  - log_snippet
+  - build_number
+  - repo

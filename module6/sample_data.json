@@ -1,0 +1,24 @@
+{
+  "metrics": {
+    "error_rate_pct": 4.7,
+    "p99_latency_ms": 820,
+    "throughput_rps": 1240,
+    "pod_restarts_1h": 6,
+    "memory_usage_pct": 78
+  },
+  "recent_alerts": [
+    {
+      "time": "14:02",
+      "service": "auth-service",
+      "type": "OOMKill",
+      "severity": "HIGH"
+    },
+    {
+      "time": "14:09",
+      "service": "checkout-service",
+      "type": "HighLatency",
+      "severity": "MEDIUM"
+    }
+  ],
+  "user_question": "Why is checkout latency high? Is it related to the auth OOMKill?"
+}

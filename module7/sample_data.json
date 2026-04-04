@@ -1,0 +1,18 @@
+{
+  "incident": {
+    "id": "INC-2024-1047",
+    "summary": "Payment service error rate 18%, DB connection timeouts, OOMKill on auth pods",
+    "affected_services": [
+      "payment-service",
+      "auth-service"
+    ],
+    "severity": "P1",
+    "duration_min": 12
+  },
+  "available_specialists": [
+    "db_agent",
+    "infra_agent",
+    "security_agent",
+    "deploy_agent"
+  ]
+}

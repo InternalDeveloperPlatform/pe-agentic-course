@@ -1,0 +1,9 @@
+# module7/agent-config.yml
+# Scenario configuration for Module 7: Multi-Agent Coordination and Implementation Strategy
+
+model: claude-opus-4-5-20251101
+max_tokens: 1024
+max_iterations: 1
+context_fields:
+  - incident
+  - available_specialists

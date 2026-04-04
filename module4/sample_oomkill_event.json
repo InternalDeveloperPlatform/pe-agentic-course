@@ -1,0 +1,50 @@
+{
+  "trigger": "deployment_complete",
+  "event_type": "oomkill",
+  "service": "checkout-service",
+  "deploy_id": "deploy-2024-0119-003",
+  "environment": "production",
+  "timestamp": "2026-04-03T09:47:12Z",
+  "health_check": {
+    "status": 503,
+    "latency_ms": null
+  },
+  "rollback_available": true,
+  "previous_version": "v1.8.2",
+  "current_version": "v1.9.0",
+  "deploy_age_minutes": 8,
+  "pod_events": [
+    {
+      "time": "2026-04-03T09:42:01Z",
+      "reason": "OOMKilling",
+      "message": "Memory limit reached: killed process 7831 (checkout-service) total-vm:2048MB, anon-rss:1024MB, file-rss:8MB"
+    },
+    {
+      "time": "2026-04-03T09:44:15Z",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container checkout-service in pod checkout-service-6b9f8d7c5-xk2p4"
+    },
+    {
+      "time": "2026-04-03T09:46:55Z",
+      "reason": "OOMKilling",
+      "message": "Memory limit reached: killed process 7902 (checkout-service) total-vm:2048MB, anon-rss:1019MB, file-rss:6MB"
+    }
+  ],
+  "metrics": {
+    "memory_limit_mi": 512,
+    "memory_peak_mi": 1024,
+    "restart_count": 3,
+    "error_rate_pct": 18.4,
+    "p95_latency_ms": 4200
+  },
+  "logs": [
+    "INFO  [checkout-service] v1.9.0 starting on port 8080",
+    "INFO  [checkout-service] Connected to orders-db in 23ms",
+    "INFO  [checkout-service] Warming up order cache (250,000 records)...",
+    "WARN  [checkout-service] Cache warm-up memory usage: 487MB",
+    "INFO  [checkout-service] Cache warm-up complete — 250,000 orders loaded",
+    "ERROR [checkout-service] Process killed by signal 9 (SIGKILL)"
+  ],
+  "previous_deploys_same_issue": 0,
+  "on_call_engineer": "maya@example.com"
+}
