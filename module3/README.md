@@ -97,7 +97,7 @@ Full result saved to `output/output_module3.json`.
 
 ---
 
-## Teaching Point
+## What's happening under the hoods?
 
 `finished=true` is the loop's exit condition — not `max_iterations`. The agent stops as soon as it has enough information, which may be after 1 iteration or 5. This is the key difference between a ReAct agent and a fixed-step pipeline: the agent decides when it is done. `max_iterations` is a safety ceiling, not the expected number of steps. An agent that always runs to `max_iterations` is not reasoning — it is just looping.
 
