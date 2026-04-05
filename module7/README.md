@@ -136,7 +136,7 @@ If you get stuck, see `solutions/solution.py`.
 
 ---
 
-## Teaching Point
+## Running agents safely
 
 **Safety First** is the non-negotiable conflict resolution rule. When the Cost Optimizer recommends scaling down a service and the Incident Responder marks that same service as protected, the Incident Responder wins — always. Cost optimization is reversible; an outage during a live incident is not. The synthesis agent's job is not to find a compromise between the two specialists: it is to implement the Safety First rule and explain the reasoning. Notice that the `full_conflict` scenario produces `final_decision: ESCALATE` even when the conflict is technically resolvable — because the synthesis agent cannot verify the incident state in real time. Escalating is the correct and honest answer when the agent is uncertain about infrastructure safety.
 
