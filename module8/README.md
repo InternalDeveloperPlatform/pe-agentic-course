@@ -185,7 +185,7 @@ PLATFORM AGENT — FINAL REPORT
 
 ---
 
-## Approach
+## Step-by-step approach
 
 - Step 1 (INGEST) is fully implemented so you can see the exact three-line pattern before writing any code yourself.
 - Steps 2–5 are `raise NotImplementedError` stubs — not because the code is hard, but because the pattern is simple enough that writing it four more times ingrains it. - Every production platform agent you build after this course will follow the same pattern: build a context dict, call Claude with a system prompt, parse structured JSON output, pass the result to the next step.
