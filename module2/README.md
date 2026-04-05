@@ -73,7 +73,6 @@ The script implements the five-step agentic loop:
 4. `step4_execute_action()` — print `recommended_action`; if `escalate=true`, print escalation notice
 5. `step5_verify_result()` — return True if output meets success criteria
 
-**Teaching point:** The five steps make testing trivial — you can unit-test `step3_parse_json()` independently of the API call, and mock `step2_call_api()` without touching the prompt logic.
 
 ---
 
