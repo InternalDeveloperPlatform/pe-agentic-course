@@ -66,7 +66,6 @@ ANTHROPIC_API_KEY=sk-... python module1/hello_claude.py
 ANTHROPIC_API_KEY=sk-... python module1/agent.py
 ```
 
-**Teaching point:** The system prompt is the program. Claude returns the same three keys every time because the system prompt specifies the exact JSON schema. This predictability is what makes agents composable.
 
 ---
 
