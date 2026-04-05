@@ -108,7 +108,7 @@ If you get stuck, see `solutions/solution.py` for the reference implementation.
 
 ---
 
-## Teaching Point
+## Multiple failure modes
 
 The gate and the monitor are intentionally two separate agents with two separate failure modes. The gate is **preventive** — it blocks a bad deploy before it reaches production. The monitor is **reactive** — it catches the failures that slip through. A single agent trying to do both jobs would conflate pre-deploy reasoning (static analysis of pipeline results) with post-deploy reasoning (live production signals). Keeping them separate also means you can tune each agent's confidence threshold and system prompt independently. The monitor's `rollback_recommended` decision is a different kind of judgment than the gate's `decision` — one is about risk, the other is about live impact.
 
