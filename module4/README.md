@@ -139,7 +139,7 @@ Also review `sample_migration_failure.json` — a second scenario (33 integratio
 
 **Why `confidence: MEDIUM`?** The agent sees the lock holder in the logs but cannot verify the lock was never released or confirm the prior deploy's state. It is inferring root cause from circumstantial evidence — not observing a deterministic error.
 
-**Teaching point:** `confidence: MEDIUM` + `escalate: true` is the correct and honest answer. An agent that returns `HIGH` confidence on infrastructure state inference is more dangerous than one that escalates.
+**Takeaway:** `confidence: MEDIUM` + `escalate: true` is the correct and honest answer. An agent that returns `HIGH` confidence on infrastructure state inference is more dangerous than one that escalates.
 
 ---
 
