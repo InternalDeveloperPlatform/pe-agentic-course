@@ -15,8 +15,8 @@ This is deliberate separation of concerns: the gate prevents bad deploys; the mo
 
 | File | Purpose |
 |------|---------|
-| `triage_agent.py` | **Exercise file** — implement `run_agent()` for the pre-deploy gate |
-| `monitor.py` | **Exercise file** — implement `run_agent()` for the post-deploy monitor |
+| `triage_agent.py` | **Demo file** — fully implemented pre-deploy quality gate agent |
+| `monitor.py` | **Demo file** — fully implemented post-deploy monitor agent |
 | `quality-gates.json` | Threshold configuration (edit this to change gate behaviour) |
 | `sample_data.json` | Sample pipeline results (agent input for both scripts) |
 | `agent-config.yml` | Model and output schema |
@@ -108,7 +108,7 @@ If you get stuck, see `solutions/solution.py` for the reference implementation.
 
 ---
 
-## Multiple failure modes
+## Teaching Point
 
 The gate and the monitor are intentionally two separate agents with two separate failure modes. The gate is **preventive** — it blocks a bad deploy before it reaches production. The monitor is **reactive** — it catches the failures that slip through. A single agent trying to do both jobs would conflate pre-deploy reasoning (static analysis of pipeline results) with post-deploy reasoning (live production signals). Keeping them separate also means you can tune each agent's confidence threshold and system prompt independently. The monitor's `rollback_recommended` decision is a different kind of judgment than the gate's `decision` — one is about risk, the other is about live impact.
 

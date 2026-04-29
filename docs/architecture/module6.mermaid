@@ -1,0 +1,32 @@
+---
+title: Module 6 — Two-Phase Conversational Observability Agent
+---
+flowchart TD
+    Q([Natural-language query\ne.g. "We are getting paged..."]) --> P1
+
+    subgraph phase1 [Phase 1 — Route  max_tokens=64]
+        P1[phase1_route] --> C1[(Claude API\nROUTING_SYSTEM_PROMPT)]
+        C1 --> QT["query_type:\nhealth_check | investigation | incident"]
+    end
+
+    subgraph fetch [Data Fetch — 4 endpoints]
+        S[observability_mock.py] --> E1([/health])
+        S --> E2([/metrics])
+        S --> E3([/anomalies])
+        S --> E4([/events])
+    end
+
+    QT --> P2
+    E1 & E2 & E3 & E4 --> P2
+
+    subgraph phase2 [Phase 2 — Analyse  max_tokens=1024]
+        P2[phase2_analyse] --> C2[(Claude API\nANALYSIS_SYSTEM_PROMPT)]
+        C2 --> R["JSON\n{ status_summary\n  narrative\n  causal_chain[]\n  confidence\n  recommended_action\n  deploy_safe\n  escalate }"]
+    end
+
+    R --> OUT([output/output_module6.json])
+
+    style phase1 fill:#E8F4FD,stroke:#2E74B5
+    style fetch fill:#F8F8F8,stroke:#AAAAAA
+    style phase2 fill:#E8F8E8,stroke:#2E6B2E
+    style OUT fill:#E8F8E8,stroke:#2E6B2E

@@ -1,0 +1,20 @@
+---
+title: Module 3 — ReAct Loop Agent
+---
+flowchart TD
+    A([sample_data.json\nor --scenario text]) --> B[hello_agent.py\nrun_agent]
+    B --> C[history = ∅]
+    C --> D["Build user_msg\n(iter 0: incident context\niter 1+: context + history)"]
+    D --> E[ask\nSYSTEM_PROMPT\n+ user_msg]
+    E --> F[(Claude API)]
+    F --> G["JSON iteration\n{ thought\n  action\n  observation\n  finished\n  confidence\n  recommended_action\n  escalate }"]
+    G --> H[Append to history]
+    H --> I{finished == true\nor max_iterations?}
+    I -- no --> D
+    I -- yes --> J([Return history list])
+    J --> K([output/output_module3.json])
+
+    style A fill:#E8F4FD,stroke:#2E74B5
+    style K fill:#E8F8E8,stroke:#2E6B2E
+    style F fill:#FFF8E1,stroke:#B8860B
+    style I fill:#F0E8FF,stroke:#6633CC

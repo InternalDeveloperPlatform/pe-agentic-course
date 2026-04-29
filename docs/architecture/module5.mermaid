@@ -1,0 +1,37 @@
+---
+title: Module 5 — Quality Gate + Post-Deploy Monitor
+---
+flowchart TD
+    subgraph config [Configuration]
+        QG([quality-gates.json\n6 thresholds])
+    end
+
+    subgraph pre [Pre-Deploy Gate]
+        A([sample_data.json\npipeline results]) --> B[triage_agent.py]
+        QG --> B
+        B --> C[(Claude API)]
+        C --> D["APPROVE\nAPPROVE_WITH_CONDITIONS\nHOLD"]
+    end
+
+    subgraph post [Post-Deploy Monitor]
+        E([live metrics\npost-deploy]) --> F[monitor.py]
+        QG --> F
+        F --> G[(Claude API)]
+        G --> H["rollback_recommended\nseverity: NONE|SCHEDULED|IMMEDIATE\ntrigger, verification_steps"]
+    end
+
+    D --> I{decision?}
+    I -- APPROVE --> J([Deploy proceeds])
+    I -- APPROVE_WITH_CONDITIONS --> K([Deploy + conditions log])
+    I -- HOLD --> L([Deploy blocked])
+
+    H --> M{rollback_recommended?}
+    M -- true, IMMEDIATE --> N([Page on-call now])
+    M -- true, SCHEDULED --> O([Schedule off-hours rollback])
+    M -- false --> P([Monitor continues])
+
+    style config fill:#F8F8F8,stroke:#AAAAAA
+    style pre fill:#E8F4FD,stroke:#2E74B5
+    style post fill:#E8F8E8,stroke:#2E6B2E
+    style L fill:#FFECEC,stroke:#CC3333
+    style N fill:#FFECEC,stroke:#CC3333

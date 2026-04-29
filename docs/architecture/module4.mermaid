@@ -1,0 +1,24 @@
+---
+title: Module 4 — CI/CD Diagnostic Agent
+---
+flowchart LR
+    subgraph inputs [Log Sources — priority order]
+        A1([--log file])
+        A2([stdin])
+        A3([built-in sample log])
+    end
+
+    A1 & A2 & A3 --> B[diagnose.py\nload_log]
+    B --> C[ask\nSYSTEM_PROMPT\n+ log content]
+    C --> D[(Claude API)]
+    D --> E["JSON\n{ error_type\n  root_cause\n  confidence\n  fix: { file, line,\n    original, corrected }\n  post_mortem\n  escalate }"]
+    E --> F([output/output_module4.json])
+    E --> G{escalate?}
+    G -- true --> H([GitHub Issue body])
+    G -- false --> I([Auto-patch candidate])
+
+    style inputs fill:#F8F8F8,stroke:#AAAAAA
+    style F fill:#E8F8E8,stroke:#2E6B2E
+    style H fill:#FFECEC,stroke:#CC3333
+    style I fill:#E8F4FD,stroke:#2E74B5
+    style D fill:#FFF8E1,stroke:#B8860B

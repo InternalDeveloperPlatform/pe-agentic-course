@@ -1,0 +1,16 @@
+---
+title: Module 1 — Hello Claude (Single-Shot Agent)
+---
+flowchart LR
+    A([sample_log.txt]) --> B[hello_claude.py\nrun_agent]
+    B --> C{MOCK_MODE?}
+    C -- yes --> D([MOCK_RESPONSE\ndict])
+    C -- no --> E[ask\nSYSTEM_PROMPT\n+ log content]
+    E --> F[(Claude API\nclaude-opus-4-5)]
+    F --> G[JSON response]
+    G --> D
+    D --> H([output/output_module1.json])
+
+    style A fill:#E8F4FD,stroke:#2E74B5
+    style H fill:#E8F8E8,stroke:#2E6B2E
+    style F fill:#FFF8E1,stroke:#B8860B

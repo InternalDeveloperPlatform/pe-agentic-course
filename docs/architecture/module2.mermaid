@@ -1,0 +1,19 @@
+---
+title: Module 2 — Structured JSON Agent
+---
+flowchart LR
+    A([sample_log.txt]) --> B[triage_agent.py\nrun_agent]
+    B --> C{MOCK_MODE?}
+    C -- yes --> D([MOCK_RESPONSE])
+    C -- no --> E[ask\nSYSTEM_PROMPT\n+ log]
+    E --> F[(Claude API)]
+    F --> G["JSON\n{ summary\n  likely_cause\n  next_step\n  confidence\n  escalate }"]
+    G --> D
+    D --> H([output/output_module2.json])
+    D --> I{escalate?}
+    I -- true --> J([GitHub Issue body])
+
+    style A fill:#E8F4FD,stroke:#2E74B5
+    style H fill:#E8F8E8,stroke:#2E6B2E
+    style J fill:#FFECEC,stroke:#CC3333
+    style F fill:#FFF8E1,stroke:#B8860B

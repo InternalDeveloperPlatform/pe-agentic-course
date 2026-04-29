@@ -1,0 +1,32 @@
+---
+title: Module 7 — Parallel Multi-Agent Orchestrator
+---
+flowchart TD
+    SD([sample_data.json\nscenario: no_conflict\npartial_conflict\nfull_conflict]) --> ORCH[orchestrator.py\nThreadPoolExecutor]
+
+    subgraph parallel [Parallel execution]
+        direction LR
+        GATE[run_gate_agent\nGATE_SYSTEM_PROMPT] --> CG[(Claude API)]
+        ROLL[run_rollback_agent\nROLLBACK_SYSTEM_PROMPT] --> CR[(Claude API)]
+    end
+
+    ORCH --> GATE & ROLL
+
+    CG --> GR["Gate result\n{ decision: APPROVE|\n  APPROVE_WITH_CONDITIONS|HOLD\n  risk_score\n  escalate }"]
+    CR --> RR["Rollback result\n{ rollback_recommended\n  severity: IMMEDIATE|\n  SCHEDULED|OPTIONAL|NONE\n  trigger }"]
+
+    GR & RR --> DC[detect_conflict]
+
+    DC --> C1{"APPROVE\n+\nIMMEDIATE?"}
+    C1 -- yes --> HC([HARD_CONFLICT\nSAFETY_FIRST_ESCALATE])
+    C1 -- no --> C2{"APPROVE_WITH_CONDITIONS\n+\nSCHEDULED?"}
+    C2 -- yes --> SC([SOFT_CONFLICT\nSOFT_ESCALATE])
+    C2 -- no --> NC([No conflict\nSYNTHESISE])
+
+    HC & SC & NC --> INT[interpret.py]
+    INT --> OUT([rollout_memo\nfor Slack / GitHub])
+
+    style parallel fill:#E8F4FD,stroke:#2E74B5
+    style HC fill:#FFECEC,stroke:#CC3333
+    style SC fill:#FFF8E1,stroke:#B8860B
+    style NC fill:#E8F8E8,stroke:#2E6B2E
