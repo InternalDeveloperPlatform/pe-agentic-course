@@ -1,11 +1,59 @@
 """
 module8/solutions/solution.py
-Complete reference solution for Module 8 Capstone.
+Reference solution for Module 8 Capstone: 5-Step Platform Agent Pipeline.
 
-Only read this after you have attempted platform_agent.py yourself.
+What this module teaches
+------------------------
+The capstone integrates every pattern from Modules 1–7 into a single linear pipeline:
 
-Run:
+  Step 1  INGEST          — classify the CI/CD failure event (worked example)
+  Step 2  DIAGNOSE        — root cause analysis with confidence calibration
+  Step 3  GATE            — quality gate evaluation (approve / hold)
+  Step 4  FIX/ESCALATE    — branching logic: auto-fix if safe, escalate if not
+  Step 5  REPORT          — write the post-mortem with prevention recommendations
+
+The pattern for every step is identical:
+    1. Build a context dict that includes the event AND the results of all prior steps.
+    2. Call run_step(step_name, PROMPT, context) — Claude returns structured JSON.
+    3. Pass the result to the next step as part of its context.
+
+This is how real production agents work: each step sees the full prior reasoning,
+not just the raw input. The pipeline accumulates context across steps.
+
+What you implemented in the exercise (platform_agent.py)
+---------------------------------------------------------
+Four functions, each following the exact same three-line pattern:
+
+    def run_step_diagnose(event, ingest):
+        context = {"event": event, "classification": ingest}
+        return run_step("DIAGNOSE", DIAGNOSE_PROMPT, context)
+
+    def run_step_gate(event, diagnose):
+        context = {"event": event, "diagnosis": diagnose}
+        return run_step("GATE", GATE_PROMPT, context)
+
+    def run_step_fix_or_escalate(event, diagnose, gate, pipeline_id):
+        context = {"event": event, "diagnosis": diagnose, "gate": gate}
+        result = run_step("FIX_OR_ESCALATE", FIX_OR_ESCALATE_PROMPT, context)
+        # AUTO_FIX path: save the script if confidence is HIGH and fix is possible
+        if result.get("path") == "AUTO_FIX" and result.get("auto_fix_script"):
+            fix_path = save_fix_script(result["auto_fix_script"], pipeline_id)
+            result["fix_script_path"] = str(fix_path)
+        return result
+
+    def generate_report(pipeline_id, steps):
+        context = {"pipeline_id": pipeline_id, "steps": steps}
+        return run_step("REPORT", REPORT_PROMPT, context)
+
+This solution imports the constants and utilities from platform_agent.py so you
+can compare your implementations side by side against the reference.
+
+Compare with: module8/platform_agent.py (the exercise you completed)
+
+Run
+---
     python module8/solutions/solution.py --mock
+    python module8/solutions/solution.py --simulate --mock
     ANTHROPIC_API_KEY=sk-... python module8/solutions/solution.py --simulate
 """
 
