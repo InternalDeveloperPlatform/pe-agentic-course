@@ -2,32 +2,50 @@
 module8/platform_agent.py
 Capstone Platform Agent — Module 8.
 
-This is the full production-grade agent that integrates every component built
-across Modules 1–7 into a single 5-step pipeline.
+Multi-agent incident pipeline — the full pattern from Modules 1–7 combined.
 
-Pipeline
---------
-  Step 1  INGEST          — classify the CI/CD failure event         ← DONE (study this)
-  Step 2  DIAGNOSE        — root cause analysis                       ← TODO
-  Step 3  GATE            — evaluate quality gates                    ← TODO
-  Step 4  FIX/ESCALATE    — auto-fix or escalate                      ← TODO
-  Step 5  REPORT          — write the post-mortem report              ← TODO
+Architecture
+------------
+                    INGEST  (Step 1)
+                       │
+           ┌───────────┴───────────┐
+           ▼                       ▼
+       DIAGNOSE               GATE
+      (parallel)            (parallel)       ← ThreadPoolExecutor, like Module 7
+           │                       │
+           └───────────┬───────────┘
+                       ▼
+               Conflict Check               ← Safety First rule from Module 7
+                       │
+               FIX / ESCALATE  (Step 4)
+                       │
+                   REPORT  (Step 5)
 
-Your task
----------
-Step 1 (INGEST) is fully implemented as a worked example — read it carefully before
-starting. Steps 2–5 follow the exact same pattern. Complete each TODO function in
-order; run --mock after each one to check your work before moving to the next.
+Key design decisions
+--------------------
+• DIAGNOSE and GATE are independent specialists — GATE evaluates static quality
+  signals from INGEST and does not need the root cause from DIAGNOSE.
+• Running them in parallel cuts wall-clock time for the two most expensive steps.
+• detect_conflict() applies the Module 7 Safety First rule: if DIAGNOSE says a fix
+  is possible (HIGH confidence) but GATE says HOLD, GATE wins — always.
+
+Your task (Steps 2–5)
+---------------------
+Step 1 (INGEST) is fully implemented as a worked example. Steps 2–5 follow the
+exact same three-line pattern. Complete each TODO function in order and run --mock
+after each one to verify before moving on.
+
+  Step 2  run_step_diagnose(event, ingest)                   ← TODO
+  Step 3  run_step_gate(event, ingest)                       ← TODO  [reads from INGEST, not DIAGNOSE]
+  Step 4  run_step_fix_or_escalate(event, diagnose, gate,    ← TODO
+                                   conflict, pipeline_id)
+  Step 5  generate_report(pipeline_id, steps)                ← TODO
+
+detect_conflict() and run_pipeline() are already wired — do not edit them.
 
 Usage
 -----
-    # Run with pre-defined mock responses (no API key needed):
-    python module8/platform_agent.py --mock
-
-    # Inject a synthetic CI failure event and run in mock mode:
     python module8/platform_agent.py --simulate --mock
-
-    # Run the real pipeline against Claude:
     ANTHROPIC_API_KEY=sk-... python module8/platform_agent.py --simulate
 
 Reference solution: module8/solutions/solution.py
@@ -37,6 +55,7 @@ import os
 import sys
 import json
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -80,6 +99,12 @@ MOCK_REPORT = {
             "risk_score":      "HIGH",
             "escalate":        True,
         },
+        "conflict": {
+            "detected":   False,
+            "type":       "NO_CONFLICT",
+            "resolution": "PROCEED",
+            "summary":    "DIAGNOSE: MEDIUM confidence. GATE: HOLD. Agents agree — both recommend escalation, no auto-fix attempted.",
+        },
         "fix_or_escalate": {
             "status":               "completed",
             "path":                 "ESCALATE",
@@ -104,6 +129,12 @@ MOCK_REPORT = {
         "recommended_action":  "ESCALATE",
         "escalate":            True,
         "confidence":          "MEDIUM",
+        "conflict": {
+            "detected":   False,
+            "type":       "NO_CONFLICT",
+            "resolution": "PROCEED",
+            "summary":    "DIAGNOSE: MEDIUM confidence. GATE: HOLD. Agents agree.",
+        },
         "github_issue_title":  "[Agent] DB Migration Lock Blocking Integration Tests — Manual Intervention Required",
         "github_issue_body":   "## Agent Diagnosis\n\n**Confidence:** MEDIUM\n**Action:** ESCALATE\n\n### Root Cause\nStale migration lock from deploy-2024-0130-011 blocking 33 integration tests.\n\n---\n_Written by Ajay · ajay@platformetrics.com · ajay@platformengineering.org_",
         "post_mortem_summary": "Stale migration lock blocked integration tests. Agent escalated correctly at MEDIUM confidence.",
@@ -132,10 +163,14 @@ You are a root cause analysis agent. Diagnose the CI/CD failure and return ONLY 
 """
 
 GATE_PROMPT = """\
-You are a quality gate evaluation agent. Given pipeline results, return ONLY valid JSON:
+You are a quality gate evaluation agent. You run in parallel with the DIAGNOSE agent —
+you do NOT have access to the diagnosis. Given only the CI/CD failure event and its
+initial classification from the INGEST step, evaluate the quality gates independently.
+Return ONLY valid JSON:
 - decision (APPROVE|APPROVE_WITH_CONDITIONS|HOLD)
-- rationale (string): one paragraph explanation
-- blocking_issues (list of strings): empty list if APPROVE
+- rationale (string): one paragraph explanation of the gate decision
+- blocking_issues (list of strings): what is preventing APPROVE — empty list if APPROVE
+- conditions (list of strings): conditions required for APPROVE_WITH_CONDITIONS — empty otherwise
 - risk_score (LOW|MEDIUM|HIGH)
 - escalate (boolean): true if a human must review before proceeding
 """
@@ -246,22 +281,82 @@ def run_step_diagnose(event: dict, ingest: dict) -> dict:
     raise NotImplementedError("Complete run_step_diagnose() — see the docstring for the pattern.")
 
 
-def run_step_gate(event: dict, diagnose: dict) -> dict:
-    """Step 3 — GATE: evaluate whether the pipeline should proceed.
+def run_step_gate(event: dict, ingest: dict) -> dict:
+    """Step 3 — GATE: evaluate quality gates independently of DIAGNOSE.
 
-    TODO: Build context from the event and the diagnose result, call
-    run_step() with GATE_PROMPT, and return the result.
+    This specialist runs in PARALLEL with run_step_diagnose() — it reads
+    from the INGEST classification, not the diagnosis. Its job is to assess
+    static quality signals: failure severity, stage, service risk, and
+    deployment eligibility — without knowing the root cause.
+
+    TODO: Build context from the event and the ingest result (not diagnose),
+    call run_step() with GATE_PROMPT, and return the result.
+
+    Hint: the context dict should look like:
+        {"event": event, "classification": ingest}
     """
-    # TODO: build context dict combining event and diagnose result
+    # TODO: build context dict combining event and ingest result
     # TODO: call run_step("GATE", GATE_PROMPT, context) and return the result
-    raise NotImplementedError("Complete run_step_gate().")
+    raise NotImplementedError("Complete run_step_gate() — use ingest, not diagnose.")
 
 
-def run_step_fix_or_escalate(event: dict, diagnose: dict, gate: dict, pipeline_id: str) -> dict:
+def detect_conflict(diagnose: dict, gate: dict) -> dict:
+    """Detect conflicts between the DIAGNOSE and GATE specialist agents.
+
+    Applies the Module 7 Safety First rule to the capstone pipeline:
+    - HARD_CONFLICT: DIAGNOSE says HIGH confidence + fix possible, but GATE says HOLD.
+      → GATE wins. Auto-fix is blocked. Escalate to human.
+    - SOFT_CONFLICT: GATE approves but DIAGNOSE confidence is MEDIUM or LOW.
+      → Agents disagree on certainty. Inform on-call, proceed with caution.
+    - NO_CONFLICT: agents agree on the path forward.
+
+    This function is provided — do not modify it.
+    """
+    gate_decision = gate.get("decision", "HOLD")
+    confidence    = diagnose.get("confidence", "LOW")
+    fix_possible  = diagnose.get("fix_possible", False)
+
+    if gate_decision == "HOLD" and fix_possible and confidence == "HIGH":
+        return {
+            "detected":   True,
+            "type":       "HARD_CONFLICT",
+            "resolution": "SAFETY_FIRST_ESCALATE",
+            "summary": (
+                f"DIAGNOSE: HIGH confidence, fix_possible=true. "
+                f"GATE: HOLD — {gate.get('blocking_issues', [])}. "
+                "Hard conflict — Safety First: block auto-fix, escalate to human."
+            ),
+        }
+    if gate_decision in ("APPROVE", "APPROVE_WITH_CONDITIONS") and confidence in ("MEDIUM", "LOW"):
+        return {
+            "detected":   True,
+            "type":       "SOFT_CONFLICT",
+            "resolution": "SOFT_ESCALATE",
+            "summary": (
+                f"DIAGNOSE: {confidence} confidence. "
+                f"GATE: {gate_decision} — but uncertain root cause warrants human review."
+            ),
+        }
+    return {
+        "detected":   False,
+        "type":       "NO_CONFLICT",
+        "resolution": "PROCEED",
+        "summary":    f"DIAGNOSE: {confidence} confidence. GATE: {gate_decision}. Agents agree.",
+    }
+
+
+def run_step_fix_or_escalate(
+    event: dict, diagnose: dict, gate: dict, conflict: dict, pipeline_id: str
+) -> dict:
     """Step 4 — FIX/ESCALATE: decide the remediation path.
 
+    Receives the results of both parallel specialists (DIAGNOSE + GATE) plus
+    the conflict detection output. The conflict is already resolved — if
+    SAFETY_FIRST_ESCALATE was triggered, include it in context so Claude
+    understands why auto-fix is off the table.
+
     TODO:
-    1. Build context from event, diagnose, and gate results.
+    1. Build context from event, diagnose, gate, and conflict.
     2. Call run_step() with FIX_OR_ESCALATE_PROMPT.
     3. If the result path is AUTO_FIX and auto_fix_script is non-empty,
        call save_fix_script(result['auto_fix_script'], pipeline_id).
@@ -271,9 +366,10 @@ def run_step_fix_or_escalate(event: dict, diagnose: dict, gate: dict, pipeline_i
     Key rule — AUTO_FIX only when ALL of these are true:
       - diagnose['confidence'] == 'HIGH'
       - diagnose['fix_possible'] == True
+      - conflict['resolution'] != 'SAFETY_FIRST_ESCALATE'
       - 'migration' not in the event logs (never auto-fix DB state)
     """
-    # TODO: build context dict
+    # TODO: build context dict including event, diagnose, gate, and conflict
     # TODO: call run_step("FIX_OR_ESCALATE", FIX_OR_ESCALATE_PROMPT, context)
     # TODO: handle AUTO_FIX path — call save_fix_script() if script is present
     # TODO: return the result
@@ -294,7 +390,12 @@ def generate_report(pipeline_id: str, steps: dict) -> dict:
 # ── Orchestrator — do not modify ───────────────────────────────────────────────
 
 def run_pipeline(event: dict) -> dict:
-    """Execute the full 5-step pipeline in sequence. Already wired up — do not edit."""
+    """Multi-agent orchestrator. Already wired — do not edit.
+
+    Runs DIAGNOSE and GATE in parallel (ThreadPoolExecutor, same pattern as
+    Module 7), then applies Safety First conflict detection before deciding
+    the remediation path.
+    """
     pipeline_id = event.get("pipeline_id", "unknown")
     steps = {}
 
@@ -302,19 +403,38 @@ def run_pipeline(event: dict) -> dict:
     print(f"PLATFORM AGENT — pipeline_id: {pipeline_id}")
     print("═" * 60)
 
+    # Step 1 — INGEST (sequential: every later step reads from this)
     print("\n[Step 1/5] INGEST")
     steps["ingest"] = {**run_step_ingest(event), "status": "completed"}
 
-    print("\n[Step 2/5] DIAGNOSE")
-    steps["diagnose"] = {**run_step_diagnose(event, steps["ingest"]), "status": "completed"}
+    # Steps 2 + 3 — DIAGNOSE and GATE run in parallel
+    # GATE reads from INGEST directly — it does not need the diagnosis.
+    # Both are independent specialists, so ThreadPoolExecutor gives real speedup.
+    print("\n[Steps 2+3/5] DIAGNOSE + GATE running in parallel...")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_diagnose = executor.submit(run_step_diagnose, event, steps["ingest"])
+        future_gate     = executor.submit(run_step_gate,     event, steps["ingest"])
+        diagnose_result = future_diagnose.result()
+        gate_result     = future_gate.result()
 
-    print("\n[Step 3/5] GATE EVALUATION")
-    steps["gate"] = {**run_step_gate(event, steps["diagnose"]), "status": "completed"}
+    steps["diagnose"] = {**diagnose_result, "status": "completed"}
+    steps["gate"]     = {**gate_result,     "status": "completed"}
 
+    # Conflict check — Safety First rule (mirrors Module 7 detect_conflict)
+    conflict = detect_conflict(steps["diagnose"], steps["gate"])
+    steps["conflict"] = conflict
+    if conflict["detected"]:
+        print(f"\n⚠️  CONFLICT: {conflict['type']} → {conflict['resolution']}")
+        print(f"   {conflict['summary']}")
+
+    # Step 4 — FIX OR ESCALATE (receives both specialists + conflict verdict)
     print("\n[Step 4/5] FIX OR ESCALATE")
-    fix = run_step_fix_or_escalate(event, steps["diagnose"], steps["gate"], pipeline_id)
+    fix = run_step_fix_or_escalate(
+        event, steps["diagnose"], steps["gate"], conflict, pipeline_id
+    )
     steps["fix_or_escalate"] = {**fix, "status": "completed"}
 
+    # Step 5 — REPORT
     print("\n[Step 5/5] REPORT")
     steps["report"] = {**generate_report(pipeline_id, steps), "status": "completed"}
 
@@ -326,6 +446,7 @@ def run_pipeline(event: dict) -> dict:
             "recommended_action":  fix.get("recommended_action", "ESCALATE"),
             "escalate":            fix.get("escalate", True),
             "confidence":          steps["diagnose"].get("confidence", "LOW"),
+            "conflict":            conflict,
             "github_issue_title":  fix.get("github_issue_title", ""),
             "github_issue_body":   fix.get("github_issue_body", ""),
             "post_mortem_summary": steps["report"].get("post_mortem_summary", ""),

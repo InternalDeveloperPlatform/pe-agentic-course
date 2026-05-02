@@ -14,15 +14,16 @@ Open `module8/platform_agent.py`. Step 1 (INGEST) is fully implemented as a work
 
 ## The Pipeline
 
-| Step | Function to complete | What Claude does |
-|------|----------------------|------------------|
-| 1 | `run_step_ingest()` | Classifies the failure event — **already done, use as your pattern** |
-| 2 | `run_step_diagnose()` | Root cause analysis — confidence HIGH/MEDIUM/LOW, fix_possible true/false |
-| 3 | `run_step_gate()` | Quality gate evaluation — APPROVE, APPROVE_WITH_CONDITIONS, or HOLD |
-| 4 | `run_step_fix_or_escalate()` | Branching logic — AUTO_FIX or ESCALATE + save fix script if applicable |
-| 5 | `generate_report()` | Post-mortem summary and prevention recommendations |
+| Step | Function to complete | Runs | What Claude does |
+|------|----------------------|------|------------------|
+| 1 | `run_step_ingest()` | Sequential | Classifies the failure event — **already done, use as your pattern** |
+| 2 | `run_step_diagnose()` | **Parallel** with Step 3 | Root cause analysis — confidence HIGH/MEDIUM/LOW, fix_possible true/false |
+| 3 | `run_step_gate()` | **Parallel** with Step 2 | Quality gate evaluation from INGEST (not DIAGNOSE) — APPROVE / HOLD |
+| — | `detect_conflict()` | After Steps 2+3 | Safety First conflict check — **provided, do not edit** |
+| 4 | `run_step_fix_or_escalate()` | Sequential | AUTO_FIX or ESCALATE — receives diagnose + gate + conflict verdict |
+| 5 | `generate_report()` | Sequential | Post-mortem summary and prevention recommendations |
 
-The pipeline orchestrator (`run_pipeline()`) is already wired up and calls your functions in order. Do not edit it.
+Steps 2 and 3 run in parallel via `ThreadPoolExecutor` inside `run_pipeline()`, which is already wired. Do not edit `run_pipeline()` or `detect_conflict()`.
 
 ---
 
@@ -182,11 +183,33 @@ PLATFORM AGENT — FINAL REPORT
 
 ## Key Takeaway
 
-- The student skeleton is intentional. Step 1 (INGEST) is fully implemented so you can see the exact three-line pattern before writing any code yourself.
-- Steps 2–5 are `raise NotImplementedError` stubs — not because the code is hard, but because writing the pattern four more times ingrains it.
-- Every production platform agent you build after this course follows the same pattern: build a context dict, call Claude with a system prompt, parse structured JSON output, pass the result to the next step.
-- The capstone proves you understand the pattern well enough to replicate it — not that you can write complex code.
-- The recording deliverable exists for the same reason: a 2-minute video of a live pipeline run is something you can show in an interview to demonstrate you built something real.
+- The capstone is a multi-agent pipeline, not a single sequential agent. DIAGNOSE and GATE run in parallel via `ThreadPoolExecutor` — the same pattern Module 7 introduced — because they are genuinely independent specialists.
+- **GATE reads from INGEST, not DIAGNOSE.** Gate evaluation (severity, stage, deployment risk) does not depend on root cause analysis. Wiring it to DIAGNOSE would be a false dependency that serialises two calls that don't need to be.
+- `detect_conflict()` applies the Module 7 Safety First rule: if DIAGNOSE says a fix is possible (HIGH confidence) but GATE says HOLD, GATE wins — auto-fix is blocked and the pipeline escalates.
+- The four TODO functions are all three-line patterns — the architecture lives in `run_pipeline()`, which is provided. Students implement the specialists; the orchestrator wires them together.
+- The recording deliverable exists for the same reason: a live pipeline run with visible conflict detection and escalation is something you can show in an engineering interview.
+
+---
+
+## Extra Credit
+
+These extensions go beyond the core exercise and are genuinely how production incident pipelines evolve. None require changes to the core TODO functions — they all extend `run_pipeline()` or add new utility functions.
+
+**Level 1 — Scenario Coverage**
+
+Edit `--simulate` to inject a HIGH-confidence scenario (change `confidence` in the mock event so the agent returns `fix_possible: True` with `confidence: HIGH`). Then also set `GATE` to return `HOLD`. Verify that `detect_conflict()` correctly triggers `SAFETY_FIRST_ESCALATE` and that no auto-fix script is written. This is the hard-conflict scenario — the most important safety test.
+
+**Level 2 — Timeout Handling**
+
+Parallel calls can hang if the API is slow. Wrap each `executor.submit()` call in a `try/except` with a `future.result(timeout=30)` and a fallback response dict. A real production orchestrator never blocks indefinitely on a specialist.
+
+**Level 3 — Third Parallel Specialist**
+
+Add a `run_step_history(event, ingest)` specialist that queries a hypothetical `/recent-deploys` endpoint and returns the last 3 deploy SHAs with their outcomes. Pass its result into `run_step_diagnose()` context so Claude has deployment history alongside the event. This mirrors how real AIOps systems enrich incidents before diagnosis.
+
+**Level 4 — Structured Conflict Report**
+
+Extend `generate_report()` to include a `conflict_summary` key in its context and a dedicated section in the post-mortem: what conflict was detected, which agent won, and what the Safety First rule prevented. A post-mortem that doesn't explain the conflict resolution is incomplete.
 
 ---
 

@@ -1,24 +1,23 @@
 """
 module8/solutions/solution.py
-Reference solution for Module 8 Capstone: 5-Step Platform Agent Pipeline.
+Reference solution for Module 8 Capstone: Multi-Agent Platform Pipeline.
 
-What this module teaches
-------------------------
-The capstone integrates every pattern from Modules 1–7 into a single linear pipeline:
-
-  Step 1  INGEST          — classify the CI/CD failure event (worked example)
-  Step 2  DIAGNOSE        — root cause analysis with confidence calibration
-  Step 3  GATE            — quality gate evaluation (approve / hold)
-  Step 4  FIX/ESCALATE    — branching logic: auto-fix if safe, escalate if not
-  Step 5  REPORT          — write the post-mortem with prevention recommendations
-
-The pattern for every step is identical:
-    1. Build a context dict that includes the event AND the results of all prior steps.
-    2. Call run_step(step_name, PROMPT, context) — Claude returns structured JSON.
-    3. Pass the result to the next step as part of its context.
-
-This is how real production agents work: each step sees the full prior reasoning,
-not just the raw input. The pipeline accumulates context across steps.
+Architecture
+------------
+                    INGEST  (Step 1)
+                       │
+           ┌───────────┴───────────┐
+           ▼                       ▼
+       DIAGNOSE               GATE
+      (parallel)            (parallel)      ← ThreadPoolExecutor
+           │                       │
+           └───────────┬───────────┘
+                       ▼
+               detect_conflict()            ← Safety First rule
+                       │
+               FIX / ESCALATE  (Step 4)
+                       │
+                   REPORT  (Step 5)
 
 What you implemented in the exercise (platform_agent.py)
 ---------------------------------------------------------
@@ -28,14 +27,21 @@ Four functions, each following the exact same three-line pattern:
         context = {"event": event, "classification": ingest}
         return run_step("DIAGNOSE", DIAGNOSE_PROMPT, context)
 
-    def run_step_gate(event, diagnose):
-        context = {"event": event, "diagnosis": diagnose}
+    # KEY CHANGE vs earlier modules: GATE reads from INGEST, not DIAGNOSE.
+    # It is an independent specialist that runs in parallel with DIAGNOSE.
+    def run_step_gate(event, ingest):
+        context = {"event": event, "classification": ingest}
         return run_step("GATE", GATE_PROMPT, context)
 
-    def run_step_fix_or_escalate(event, diagnose, gate, pipeline_id):
-        context = {"event": event, "diagnosis": diagnose, "gate": gate}
+    # FIX_OR_ESCALATE now receives the conflict verdict too.
+    def run_step_fix_or_escalate(event, diagnose, gate, conflict, pipeline_id):
+        context = {
+            "event":    event,
+            "diagnosis": diagnose,
+            "gate":     gate,
+            "conflict": conflict,
+        }
         result = run_step("FIX_OR_ESCALATE", FIX_OR_ESCALATE_PROMPT, context)
-        # AUTO_FIX path: save the script if confidence is HIGH and fix is possible
         if result.get("path") == "AUTO_FIX" and result.get("auto_fix_script"):
             fix_path = save_fix_script(result["auto_fix_script"], pipeline_id)
             result["fix_script_path"] = str(fix_path)
@@ -45,14 +51,8 @@ Four functions, each following the exact same three-line pattern:
         context = {"pipeline_id": pipeline_id, "steps": steps}
         return run_step("REPORT", REPORT_PROMPT, context)
 
-This solution imports the constants and utilities from platform_agent.py so you
-can compare your implementations side by side against the reference.
-
-Compare with: module8/platform_agent.py (the exercise you completed)
-
 Run
 ---
-    python module8/solutions/solution.py --mock
     python module8/solutions/solution.py --simulate --mock
     ANTHROPIC_API_KEY=sk-... python module8/solutions/solution.py --simulate
 """
@@ -61,6 +61,7 @@ import os
 import sys
 import json
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -77,7 +78,7 @@ from platform_agent import (
     MOCK_REPORT,
     INGEST_PROMPT, DIAGNOSE_PROMPT, GATE_PROMPT,
     FIX_OR_ESCALATE_PROMPT, REPORT_PROMPT,
-    AGENT_CONFIG, load_event, run_step, save_fix_script,
+    AGENT_CONFIG, load_event, run_step, save_fix_script, detect_conflict,
 )
 
 
@@ -95,19 +96,25 @@ def run_step_diagnose(event: dict, ingest: dict) -> dict:
     return run_step("DIAGNOSE", DIAGNOSE_PROMPT, context)
 
 
-def run_step_gate(event: dict, diagnose: dict) -> dict:
+def run_step_gate(event: dict, ingest: dict) -> dict:
+    # KEY: reads from INGEST, not DIAGNOSE — runs in parallel with run_step_diagnose.
+    # GATE evaluates static quality signals (severity, stage, risk) independently.
     context = {
-        "event":     event,
-        "diagnosis": diagnose,
+        "event":          event,
+        "classification": ingest,
     }
     return run_step("GATE", GATE_PROMPT, context)
 
 
-def run_step_fix_or_escalate(event: dict, diagnose: dict, gate: dict, pipeline_id: str) -> dict:
+def run_step_fix_or_escalate(
+    event: dict, diagnose: dict, gate: dict, conflict: dict, pipeline_id: str
+) -> dict:
+    # Context now includes the conflict verdict so Claude understands the full picture.
     context = {
-        "event":     event,
+        "event":    event,
         "diagnosis": diagnose,
-        "gate":      gate,
+        "gate":     gate,
+        "conflict": conflict,
     }
     result = run_step("FIX_OR_ESCALATE", FIX_OR_ESCALATE_PROMPT, context)
 
@@ -139,14 +146,28 @@ def run_pipeline(event: dict) -> dict:
     print("\n[Step 1/5] INGEST")
     steps["ingest"] = {**run_step_ingest(event), "status": "completed"}
 
-    print("\n[Step 2/5] DIAGNOSE")
-    steps["diagnose"] = {**run_step_diagnose(event, steps["ingest"]), "status": "completed"}
+    # Steps 2+3: DIAGNOSE and GATE run in parallel — both read from INGEST
+    print("\n[Steps 2+3/5] DIAGNOSE + GATE running in parallel...")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_diagnose = executor.submit(run_step_diagnose, event, steps["ingest"])
+        future_gate     = executor.submit(run_step_gate,     event, steps["ingest"])
+        diagnose_result = future_diagnose.result()
+        gate_result     = future_gate.result()
 
-    print("\n[Step 3/5] GATE EVALUATION")
-    steps["gate"] = {**run_step_gate(event, steps["diagnose"]), "status": "completed"}
+    steps["diagnose"] = {**diagnose_result, "status": "completed"}
+    steps["gate"]     = {**gate_result,     "status": "completed"}
+
+    # Conflict detection — Safety First
+    conflict = detect_conflict(steps["diagnose"], steps["gate"])
+    steps["conflict"] = conflict
+    if conflict["detected"]:
+        print(f"\n⚠️  CONFLICT: {conflict['type']} → {conflict['resolution']}")
+        print(f"   {conflict['summary']}")
 
     print("\n[Step 4/5] FIX OR ESCALATE")
-    fix = run_step_fix_or_escalate(event, steps["diagnose"], steps["gate"], pipeline_id)
+    fix = run_step_fix_or_escalate(
+        event, steps["diagnose"], steps["gate"], conflict, pipeline_id
+    )
     steps["fix_or_escalate"] = {**fix, "status": "completed"}
 
     print("\n[Step 5/5] REPORT")
@@ -160,6 +181,7 @@ def run_pipeline(event: dict) -> dict:
             "recommended_action":  fix.get("recommended_action", "ESCALATE"),
             "escalate":            fix.get("escalate", True),
             "confidence":          steps["diagnose"].get("confidence", "LOW"),
+            "conflict":            conflict,
             "github_issue_title":  fix.get("github_issue_title", ""),
             "github_issue_body":   fix.get("github_issue_body", ""),
             "post_mortem_summary": steps["report"].get("post_mortem_summary", ""),
