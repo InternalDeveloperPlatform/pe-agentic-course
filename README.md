@@ -1,5 +1,5 @@
 # Agentic AI in Platform Engineering
-### PlatformEngineering.org — [university.platformengineering.org/agentic-ai-in-platform-engineering](https://university.platformengineering.org/agentic-ai-in-platform-engineering)
+### A PlatformEngineering.org course
 
 This repository contains the hands-on exercise code for every module of the course. Each `moduleN/` directory is self-contained: one agent script, one sample data file, one config, and a README with the exercise brief.
 
