@@ -23,9 +23,15 @@ import os
 import sys
 import json
 import textwrap
+import yaml
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# ── Load configuration from agent-config.yml ───────────────────────────────────
+CONFIG_PATH = Path(__file__).parent / "agent-config.yml"
+with open(CONFIG_PATH) as f:
+    AGENT_CONFIG = yaml.safe_load(f)
 
 # ── Mode flags ─────────────────────────────────────────────────────────────────
 MANUAL_MODE = "--manual" in sys.argv
@@ -70,13 +76,22 @@ def run_manual_mode() -> None:
     print(f"{separator}\n")
 
 
+def load_sample() -> str:
+    sample = Path(__file__).parent / "sample_log.txt"
+    return sample.read_text()
+
+
 def run_api_mode() -> dict:
     """Call the Claude API and return the parsed JSON response."""
+
+    context = load_sample()
+
     from shared.claude_client import ask
     return ask(
         system=SYSTEM_PROMPT,
-        user=f"CI failure log:\n\n{SAMPLE_LOG}",
-        max_tokens=512,
+            user=f"Context:\n{context}",
+            model=AGENT_CONFIG["model"],
+            max_tokens=AGENT_CONFIG["max_tokens"],
     )
 
 
