@@ -89,9 +89,9 @@ def run_api_mode() -> dict:
     from shared.claude_client import ask
     return ask(
         system=SYSTEM_PROMPT,
-            user=f"Context:\n{context}",
-            model=AGENT_CONFIG["model"],
-            max_tokens=AGENT_CONFIG["max_tokens"],
+        user=f"Context:\n{context}",
+        model=AGENT_CONFIG["model"],
+        max_tokens=AGENT_CONFIG["max_tokens"],
     )
 
 
