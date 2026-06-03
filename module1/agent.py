@@ -22,7 +22,6 @@ from shared.claude_client import ask
 from shared.output import save_json, to_step_summary, to_github_issue
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 # ── Mock mode flag ───────────────────────────────────────────────────────────
 MOCK_MODE = "--mock" in sys.argv or os.environ.get("MOCK_MODE") == "1"
 
