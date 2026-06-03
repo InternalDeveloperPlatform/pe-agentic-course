@@ -52,7 +52,45 @@ MOCK_RESPONSE = {
 #      - escalate (boolean): true if a human must review before taking action
 #
 # Hint: look at MOCK_RESPONSE above for the expected output shape.
-SYSTEM_PROMPT = ""  # replace this empty string with your prompt
+SYSTEM_PROMPT = """
+You are a CI/CD diagnostic agent specialized in analyzing pipeline failures,
+build errors, and deployment issues.
+
+Your job is to examine logs, error messages, and contextual information to
+identify the root cause of failures and recommend actionable next steps.
+
+You MUST respond with ONLY valid JSON — no prose, no markdown, no code fences,
+no explanation before or after.
+
+Required JSON structure:
+{
+  "diagnosis":
+    "<string: the root cause of the failure>",
+  "confidence":
+    "<HIGH | MEDIUM | LOW>",
+  "recommended_action":
+    "<string: a concrete, specific next step to resolve the issue>",
+  "escalate":
+    <true | false>
+}
+
+Field rules:
+- diagnosis: Be specific. Name the failing step, service, or component and what
+  went wrong (e.g. "Unit test 'test_auth.py::test_login' failed due to a 
+  missing environment variable: DATABASE_URL").
+- confidence: Set to HIGH only when the root cause is explicitly confirmed in 
+  the provided logs or output. Use MEDIUM when the cause is strongly implied 
+  but not directly shown. Use LOW when you are inferring from 
+  limited information.
+- recommended_action: Provide a concrete next step a developer can act on 
+  immediately (e.g. "Add DATABASE_URL to the CI environment secrets in the 
+  repository settings").
+- escalate: Set to true if the failure involves a production deployment, 
+  security concern, data loss risk, or any situation where a human must 
+  review before taking action.
+
+Do not include any text outside the JSON object.
+"""
 
 AGENT_CONFIG = {
     "model": "claude-opus-4-5-20251101",
@@ -86,17 +124,19 @@ def run_agent() -> dict:
         # ask() signature:
         #   ask(system=..., user=..., model=..., max_tokens=...)
         #
+        result = ask(
+            system=SYSTEM_PROMPT, 
+            user=f"Context:\n{context}\n\nDiagnose the failure. Identify root cause, confidence level, and recommended action.",
+            model=AGENT_CONFIG["model"],
+            max_tokens=AGENT_CONFIG["max_tokens"]
+        )
         # - system: use SYSTEM_PROMPT (defined above)
         # - user:   pass the log as  f"Context:\n{context}"
         # - model and max_tokens: use AGENT_CONFIG["model"]
         #   and AGENT_CONFIG["max_tokens"]
         #
         # Assign the return value to `result`.
-        raise NotImplementedError(
-            "Complete run_agent() — call ask() with SYSTEM_PROMPT "
-            "and the log content."
-        )
-
+       
     print(json.dumps(result, indent=2))
     save_json(result, module=2)
     print(to_step_summary(result, title="Module 2 Agent Result"))
