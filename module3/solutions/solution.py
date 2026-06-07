@@ -91,7 +91,7 @@ AGENT_CONFIG = {
 
 def load_sample() -> str:
     """Load the K8s OOMKill incident data from sample_data.json."""
-    return (Path(__file__).parent.parent / "sample_data.json").read_text()
+    return (Path(__file__).parent.parent / "sample_k8s_event.json").read_text()
 
 
 def run_agent() -> dict:
