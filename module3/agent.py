@@ -59,7 +59,7 @@ def load_sample() -> str:
 
 
 def run_agent() -> dict:
-    context = load_sample()
+    incident = load_sample()
 
     if MOCK_MODE:
         print("[MOCK MODE] Skipping Claude API — returning pre-defined response.")
