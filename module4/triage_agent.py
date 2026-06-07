@@ -37,17 +37,9 @@ MOCK_RESPONSE = {
 }
 
 # ── Prompt & config ────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = 
-{
-    "You are a deployment triage agent. The service is returning 503 errors "
-    "post-deploy with no exceptions in the logs — a silent failure. "
-    "Analyse the deployment context and return ONLY valid JSON with keys: "
-    "diagnosis (string), confidence (HIGH|MEDIUM|LOW), "
-    "root_cause_hypothesis (string), proposed_fix (string), "
-    "recommended_action (ROLLBACK|ESCALATE|INVESTIGATE), escalate (boolean). "
-    "Use MEDIUM confidence when inferring infrastructure state from indirect signals. "
-    "HIGH confidence requires a deterministic log trace (exception, line number, etc.)."
-}
+SYSTEM_PROMPT = (
+    "You are a deployment triage agent. The service is returning 503 errors with no exceptions in the logs — a silent failure. Analyse the context and return ONLY valid JSON with keys: diagnosis (string), confidence (HIGH|MEDIUM|LOW), root_cause_hypothesis (string), proposed_fix (string), recommended_action (ROLLBACK|ESCALATE|INVESTIGATE), escalate (boolean)."
+)
 
 AGENT_CONFIG = {
     "model": "claude-opus-4-5-20251101",
