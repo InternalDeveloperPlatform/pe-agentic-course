@@ -88,4 +88,77 @@ python module1/hello_claude.py --mock     # local mock response, no API call
 
 ---
 
+### Q: The instructions say to clone the repo, but I need to fork it to add secrets for GitHub Actions. Which is correct?
+
+**Asked by:** Steven
+
+Fork first, then clone your fork. The distinction matters because GitHub Actions secrets (where you store your `ANTHROPIC_API_KEY`) can only be added to repositories you own. If you clone the original repo directly, you won't have a Settings tab and won't be able to add secrets.
+
+Correct flow:
+1. Go to [github.com/InternalDeveloperPlatform/pe-agentic-course](https://github.com/InternalDeveloperPlatform/pe-agentic-course) and click **Fork**
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/pe-agentic-course.git`
+3. Add your API key: Settings → Secrets and variables → Actions → New repository secret → `ANTHROPIC_API_KEY`
+
+The README has been updated to reflect this.
+
+---
+
+### Q: The exercise says to write the SYSTEM_PROMPT but it's already filled in inside hello_claude.py and agent.py. What am I supposed to do?
+
+**Asked by:** Steven
+
+Good catch — this was a bug in the exercise files. `hello_claude.py` has been updated: `SYSTEM_PROMPT` is now an empty string with TODO comments describing what the prompt must do. Your task is to write the prompt from scratch.
+
+`agent.py` is intentionally pre-filled — it's the runner that GitHub Actions calls and is not the exercise file. The exercise file is `hello_claude.py` only.
+
+If you already completed Module 1 with the filled-in prompt, you've still learned the key lesson (how the API call works and how structured output is produced). To get the full exercise value, clear the `SYSTEM_PROMPT` in your fork and write your own before checking `solutions/solution.py`.
+
+---
+
+### Q: The GitHub Actions workflow fails immediately — something about pip and a missing requirements.txt
+
+**Asked by:** Steven
+
+Correct — `requirements.txt` was missing from the root of the repo. It has been added. Pull the latest from the upstream repo (or add a `requirements.txt` containing just `anthropic` to the root of your fork) and the workflow will complete cleanly.
+
+---
+
+## Module 5
+
+### Q: What are the threshold definitions and allowable values in quality-gates.json? What do the SAST findings thresholds mean?
+
+**Asked by:** Kevin
+
+Each gate has three fields: `metric` (what gets measured), `threshold` (the value to compare against), and `operator` (which direction the comparison runs). A gate passes when `metric <operator> threshold` is true.
+
+Here's what each of the six gates actually does:
+
+`test_coverage` checks `coverage_pct >= 95`. The sample data ships with 81.4%, so this gate fails out of the box. Lower the threshold to `80` in `quality-gates.json` and it passes — no code change required, which is the whole point of the architecture.
+
+`coverage_branch` checks `coverage_branch_pct >= 80`. This measures if/else paths exercised by tests, not just lines — it's a stricter bar than line coverage, so the threshold is set lower.
+
+`sast_findings` is the one you asked about. It checks `security_scan.high <= 0` — zero HIGH-severity findings allowed, period. Even one finding blocks the deploy. The sample data has `"high": 1`, so it fails deliberately — that's by design for the exercise. Set the threshold to `1` if you want to see it pass, but keep it at `0` in any real production gate. This is also one of the two `rollback_trigger` gates, so if it fires post-deploy, `monitor.py` escalates.
+
+`lighthouse_score` checks `lighthouse_score >= 85`. The sample data has 91, so this one passes cleanly.
+
+`latency_p95_delta` checks `latency_p95_delta_pct <= 10` — that's a percentage increase in P95 latency vs the previous deploy, not an absolute millisecond value. The sample data has 18.4%, so it fails and is what drives the rollback decision in `monitor.py`. This is the other `rollback_trigger` gate.
+
+`cost_per_request_delta` checks `cost_per_request_delta_pct <= 10`. Same delta-percentage pattern as latency. Sample data has 3.2%, so it passes.
+
+The `operator` field only ever takes `>=` (coverage and Lighthouse — higher is better) or `<=` (findings count and deltas — lower is better).
+
+Both `triage_agent.py` and `monitor.py` read `quality-gates.json` at runtime. `monitor.py` loads only the two rollback-trigger gates. `triage_agent.py` loads all six and passes them to Claude as data alongside the pipeline results — that's the config-driven architecture the module is built around. Edit the JSON, the gate behaviour changes, no Python touched.
+
+One thing worth knowing: the `MOCK_RESPONSE` in `triage_agent.py` shows `coverage: 74.1%`, which is a hand-crafted scenario. The actual `sample_data.json` has `coverage_pct: 81.4`. They're intentionally different — two distinct gate scenarios to illustrate different outcomes.
+
+A good sequence to try:
+
+1. `python module5/triage_agent.py --mock` — see the APPROVE_WITH_CONDITIONS scenario
+2. Set `test_coverage.threshold` to `70` in `quality-gates.json` and run live — the coverage gate now passes, watch the decision shift
+3. `python module5/monitor.py --mock` — see the rollback scenario triggered by 18.4% P95 latency
+4. Set `latency_p95_delta.threshold` to `20` — latency gate passes, rollback recommendation disappears
+5. Set `sast_findings.threshold` to `1` — security gate now lets one HIGH finding through
+
+---
+
 *More questions will be added here as they come in. If you have a question, post it in the Slack course channel.*
